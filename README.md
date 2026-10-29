@@ -35,11 +35,14 @@ CropDeal backend consists of four independent microservices:
 - Order history
 - Database: `CropDealOrders`
 
-### 🔜 PaymentService (Planned)
+### ✅ PaymentService (Complete)
 - Payment processing
-- Transaction records
-- Payment status tracking
+- Transaction management
+- Payment history
+- Refund functionality
+- Simulated payment gateway
 - Database: `CropDealPayments`
+- Port: Configured in launchSettings.json
 
 ## Technology Stack
 
@@ -81,9 +84,31 @@ CropDeal/
 │   ├── README.md
 │   └── QUICKSTART.md
 │
-├── OrderService/         (Coming soon)
+├── OrderService/
+│   ├── Controllers/
+│   ├── DTOs/
+│   ├── Data/
+│   ├── Migrations/
+│   ├── Models/
+│   ├── Repositories/
+│   ├── Services/
+│   ├── Program.cs
+│   ├── appsettings.json
+│   ├── README.md
+│   └── QUICKSTART.md
 │
-├── PaymentService/       (Coming soon)
+├── PaymentService/
+│   ├── Controllers/
+│   ├── DTOs/
+│   ├── Data/
+│   ├── Migrations/
+│   ├── Models/
+│   ├── Repositories/
+│   ├── Services/
+│   ├── Program.cs
+│   ├── appsettings.json
+│   ├── README.md
+│   └── QUICKSTART.md
 │
 └── README.md            (This file)
 ```
@@ -117,8 +142,8 @@ We deliberately avoid:
 |---------|---------------|---------|
 | IdentityService | CropDealIdentity | Users, roles, authentication |
 | CropService | CropDealCrops | Crops, listings |
-| OrderService | CropDealOrders | Orders, transactions |
-| PaymentService | CropDealPayments | Payments, invoices |
+| OrderService | CropDealOrders | Orders, invoices, receipts, reviews |
+| PaymentService | CropDealPayments | Payments, transactions, refunds |
 
 ## JWT Configuration
 
@@ -146,6 +171,9 @@ All services share the same JWT configuration for authentication:
 - Register and login
 - Browse listings
 - Place orders (OrderService)
+- View order history
+- Cancel orders before completion
+- Submit reviews after completion
 - Make payments (PaymentService)
 
 ### Admin
@@ -196,6 +224,14 @@ All services share the same JWT configuration for authentication:
    # CropService
    cd ../CropService
    dotnet ef database update
+   
+   # OrderService
+   cd ../OrderService
+   dotnet ef database update
+   
+   # PaymentService
+   cd ../PaymentService
+   dotnet ef database update
    ```
 
 5. **Run services**
@@ -210,12 +246,22 @@ All services share the same JWT configuration for authentication:
    # Terminal 2 - CropService
    cd CropService
    dotnet run
+   
+   # Terminal 3 - OrderService
+   cd OrderService
+   dotnet run
+   
+   # Terminal 4 - PaymentService
+   cd PaymentService
+   dotnet run
    ```
 
 6. **Access Swagger UI**
    
    - IdentityService: https://localhost:7xxx/swagger
    - CropService: https://localhost:7yyy/swagger
+   - OrderService: https://localhost:7zzz/swagger
+   - PaymentService: https://localhost:7www/swagger
    
    (Check console output for exact ports)
 
@@ -285,12 +331,102 @@ Authorization: Bearer <farmer-token>
 }
 ```
 
-### 5. Browse Listings (Public - CropService)
+### 5. Create Listing (Farmer - CropService)
+
+```bash
+POST https://localhost:7yyy/api/crops/listings
+Authorization: Bearer <farmer-token>
+{
+  "cropId": 1,
+  "quantity": 100.00,
+  "expectedPrice": 2500.00,
+  "location": "Punjab, India"
+}
+```
+
+### 6. Browse Listings (Public - CropService)
 
 ```bash
 # No authentication required
 GET https://localhost:7yyy/api/crops/listings
 GET https://localhost:7yyy/api/crops/listings?category=Grain
+```
+
+### 7. Place Order (Dealer - OrderService)
+
+```bash
+POST https://localhost:7zzz/api/order
+Authorization: Bearer <dealer-token>
+{
+  "listingId": 1,
+  "farmerId": 5,
+  "quantity": 50.00,
+  "price": 2500.00
+}
+```
+
+### 8. Farmer Confirms Order (OrderService)
+
+```bash
+PUT https://localhost:7zzz/api/order/1/status
+Authorization: Bearer <farmer-token>
+{
+  "status": 1
+}
+```
+
+### 9. Complete Order and Generate Documents (OrderService)
+
+```bash
+# Mark as completed
+PUT https://localhost:7zzz/api/order/1/status
+{
+  "status": 3
+}
+
+# Generate invoice
+POST https://localhost:7zzz/api/invoice/generate/1
+
+# Generate receipt
+POST https://localhost:7zzz/api/receipt/generate/1
+```
+
+### 10. Submit Review (Dealer - OrderService)
+
+```bash
+POST https://localhost:7zzz/api/review
+Authorization: Bearer <dealer-token>
+{
+  "orderId": 1,
+  "farmerId": 5,
+  "rating": 5,
+  "comment": "Excellent quality!"
+}
+```
+
+### 11. Make Payment (Dealer - PaymentService)
+
+```bash
+POST https://localhost:7www/api/payment
+Authorization: Bearer <dealer-token>
+{
+  "orderId": 1,
+  "farmerId": 5,
+  "amount": 125000.00,
+  "paymentMethod": "CreditCard"
+}
+```
+
+### 12. View Payment History (PaymentService)
+
+```bash
+# Dealer's payments
+GET https://localhost:7www/api/payment/history
+Authorization: Bearer <dealer-token>
+
+# Farmer's received payments
+GET https://localhost:7www/api/payment/history
+Authorization: Bearer <farmer-token>
 ```
 
 ## Service Communication
@@ -320,6 +456,11 @@ Each service has its own Swagger UI:
   - Crop management (Admin)
   - Listing management (Farmer)
   - Public browsing
+
+- **PaymentService**: https://localhost:7www/swagger
+  - Payment processing (Dealer)
+  - Payment history (Dealer/Farmer)
+  - Refund management (Admin)
 
 ## Security
 
@@ -398,22 +539,33 @@ Each service has detailed documentation:
 
 ## Next Steps
 
-1. **Complete current services testing**
-   - Test all IdentityService endpoints
-   - Test all CropService endpoints
-   - Verify JWT authentication works across services
+### Backend Complete! 🎉
 
-2. **Build OrderService**
-   - Order creation from listings
-   - Order management
-   - Status tracking
+All four microservices are now operational:
+- ✅ IdentityService
+- ✅ CropService
+- ✅ OrderService
+- ✅ PaymentService
 
-3. **Build PaymentService**
-   - Payment processing
-   - Transaction records
-   - Integration with OrderService
+### Recommended Next Steps
 
-4. **Add API Gateway**
+1. **Testing & Integration**
+   - Test complete end-to-end workflow
+   - Verify JWT authentication across all services
+   - Test role-based authorization
+   - Validate business logic and data flow
+
+2. **API Gateway** (Optional)
+   - Implement API Gateway for unified entry point
+   - Route requests to appropriate microservices
+   - Handle cross-cutting concerns
+
+3. **Message Queue** (Optional)
+   - Add RabbitMQ or similar for async communication
+   - Implement event-driven architecture
+   - Handle service-to-service notifications
+
+4. **Frontend Development**
    - Single entry point
    - Request routing
    - Authentication gateway

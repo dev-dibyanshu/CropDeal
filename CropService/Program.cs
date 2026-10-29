@@ -6,6 +6,7 @@ using Microsoft.OpenApi.Models;
 using CropService.Data;
 using CropService.Repositories;
 using CropService.Services;
+using CropService.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -96,6 +97,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();

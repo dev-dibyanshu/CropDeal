@@ -6,6 +6,7 @@ using Microsoft.OpenApi.Models;
 using IdentityService.Data;
 using IdentityService.Repositories;
 using IdentityService.Services;
+using IdentityService.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -94,6 +95,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
