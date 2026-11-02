@@ -87,6 +87,24 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+// Seed Admin user
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var userRepository = services.GetRequiredService<IUserRepository>();
+        var configuration = services.GetRequiredService<IConfiguration>();
+        var seeder = new AdminSeeder(userRepository, configuration);
+        await seeder.SeedAdminAsync();
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while seeding the admin user.");
+    }
+}
+
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
