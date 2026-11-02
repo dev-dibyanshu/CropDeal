@@ -9,4 +9,5 @@ public interface ICropListingService
     Task<IEnumerable<CropListingResponseDto>> GetListingsByFarmerIdAsync(int farmerId);
     Task<(bool Success, string? Message, CropListingResponseDto? Listing)> CreateListingAsync(int farmerId, CreateCropListingDto createListingDto);
     Task<(bool Success, string? Message, CropListingResponseDto? Listing)> UpdateListingAsync(int id, int farmerId, UpdateCropListingDto updateListingDto);
+    Task<(bool Success, string? Message)> UpdateAvailableQuantityAsync(int id, decimal newAvailableQuantity);
 }

@@ -7,14 +7,38 @@ namespace OrderService.Services;
 public class OrderService : IOrderService
 {
     private readonly IOrderRepository _orderRepository;
+    private readonly ICropServiceClient _cropServiceClient;
+    private readonly ILogger<OrderService> _logger;
 
-    public OrderService(IOrderRepository orderRepository)
+    public OrderService(IOrderRepository orderRepository, ICropServiceClient cropServiceClient, ILogger<OrderService> logger)
     {
         _orderRepository = orderRepository;
+        _cropServiceClient = cropServiceClient;
+        _logger = logger;
     }
 
     public async Task<(bool Success, string? Message, OrderResponseDto? Order)> CreateOrderAsync(int dealerId, CreateOrderDto createOrderDto)
     {
+        // Validate quantity is positive
+        if (createOrderDto.Quantity <= 0)
+        {
+            return (false, "Quantity must be greater than 0", null);
+        }
+
+        // Get current crop listing from CropService
+        var cropListing = await _cropServiceClient.GetCropListingAsync(createOrderDto.ListingId);
+        if (cropListing == null)
+        {
+            return (false, "Crop listing not found", null);
+        }
+
+        // Validate requested quantity does not exceed available quantity
+        if (createOrderDto.Quantity > cropListing.AvailableQuantity)
+        {
+            return (false, "Requested quantity exceeds available quantity", null);
+        }
+
+        // Create order
         var totalAmount = createOrderDto.Quantity * createOrderDto.Price;
 
         var order = new Order
@@ -30,6 +54,16 @@ public class OrderService : IOrderService
         };
 
         var createdOrder = await _orderRepository.CreateAsync(order);
+
+        // Update available quantity in CropService
+        var newAvailableQuantity = cropListing.AvailableQuantity - createOrderDto.Quantity;
+        var updated = await _cropServiceClient.UpdateListingQuantityAsync(createOrderDto.ListingId, newAvailableQuantity);
+        
+        if (!updated)
+        {
+            _logger.LogWarning("Failed to update available quantity for listing {ListingId}", createOrderDto.ListingId);
+            // Note: Order was created but quantity update failed - this should be handled with proper transaction management
+        }
 
         return (true, "Order created successfully", MapToResponseDto(createdOrder));
     }

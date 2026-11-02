@@ -130,4 +130,23 @@ public class CropListingService : ICropListingService
             CreatedAt = listing.CreatedAt
         };
     }
+
+    public async Task<(bool Success, string? Message)> UpdateAvailableQuantityAsync(int id, decimal newAvailableQuantity)
+    {
+        var listing = await _listingRepository.GetByIdAsync(id);
+        if (listing == null)
+        {
+            return (false, "Listing not found");
+        }
+
+        if (newAvailableQuantity < 0)
+        {
+            return (false, "Available quantity cannot be negative");
+        }
+
+        listing.AvailableQuantity = newAvailableQuantity;
+        await _listingRepository.UpdateAsync(listing);
+
+        return (true, "Available quantity updated successfully");
+    }
 }

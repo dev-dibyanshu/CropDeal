@@ -26,6 +26,13 @@ builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 builder.Services.AddScoped<IReceiptService, ReceiptService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 
+// Add HttpClient for CropService communication
+var cropServiceUrl = builder.Configuration["Services:CropServiceUrl"] ?? "http://localhost:5159";
+builder.Services.AddHttpClient<ICropServiceClient, CropServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(cropServiceUrl);
+});
+
 // Add JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);

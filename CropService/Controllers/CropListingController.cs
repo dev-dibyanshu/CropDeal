@@ -93,4 +93,26 @@ public class CropListingController : ControllerBase
 
         return Ok(listing);
     }
+
+    [HttpPut("{id}/quantity")]
+    public async Task<IActionResult> UpdateAvailableQuantity(int id, [FromBody] UpdateQuantityDto updateQuantityDto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var (success, message) = await _listingService.UpdateAvailableQuantityAsync(id, updateQuantityDto.AvailableQuantity);
+
+        if (!success)
+        {
+            if (message == "Listing not found")
+            {
+                return NotFound(new { message });
+            }
+            return BadRequest(new { message });
+        }
+
+        return Ok(new { message });
+    }
 }
